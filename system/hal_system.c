@@ -8,14 +8,20 @@ hal_status_t hal_system_init(const hal_system_config_t *config) {
     if (initialized || hal_memory_get_info(&info) == HAL_MEMORY_OK) {
         return HAL_STATUS_INVALID_STATE;
     }
-    if (!config || !config->memory_buffer || config->memory_capacity == 0 ||
+    if (!config || !config->memory_buffer || config->memory_capacity == 0 || config->cpu_clock == 0 ||
         (uintptr_t)config->memory_buffer % _Alignof(max_align_t) != 0) {
         return HAL_STATUS_INVALID_ARGUMENT;
     }
     if (k_is_in_isr()) {
         return HAL_STATUS_ERROR;
     }
+    if (config->cpu_clock != 64000000U) {
+        return HAL_STATUS_NOT_SUPPORTED;
+    }
     // Zephyr has initialized the CPU, clocks, kernel and GPIO devices before main.
+    if (SystemCoreClock != config->cpu_clock) {
+        return HAL_STATUS_ERROR;
+    }
     hal_status_t status = hal_nrf_connect_memory_status(hal_memory_init(config->memory_buffer, config->memory_capacity));
     if (status == HAL_STATUS_OK) {
         initialized = true;
